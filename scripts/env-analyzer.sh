@@ -3,7 +3,7 @@
 # EnvSphere 环境变量分析器
 # 自动分析当前环境变量并按类别分组
 
-set -euo pipefail
+set -e
 
 # 颜色定义
 readonly RED='\033[0;31m'
