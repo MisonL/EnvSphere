@@ -441,7 +441,7 @@ main() {
     echo ""
     print_color "${CYAN}" "📚 完整文档: https://github.com/MisonL/EnvSphere"
     echo ""
-    print_color "${CYAN}" "🎥 视频教程: https://github.com/MisonL/EnvSphere#tutorial"
+    print_color "${CYAN}" "📖 使用教程: https://github.com/MisonL/EnvSphere/blob/main/docs/TUTORIAL.md"
     echo ""
     print_color "${CYAN}" "💡 高级用法:"
     echo "   - 在项目目录创建 .envsphere 文件实现自动加载"

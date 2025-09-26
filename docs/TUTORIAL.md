@@ -215,8 +215,7 @@ envsphere analyze 2>/dev/null
 
 - **完整文档**: https://github.com/MisonL/EnvSphere
 - **示例项目**: https://github.com/MisonL/EnvSphere/tree/main/examples
-- **常见问题**: https://github.com/MisonL/EnvSphere/blob/main/docs/FAQ.md
-- **更新日志**: https://github.com/MisonL/EnvSphere/blob/main/CHANGELOG.md
+- **常见问题**: https://github.com/MisonL/EnvSphere/issues
 
 ## 💬 获取帮助
 
