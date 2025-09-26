@@ -1,12 +1,18 @@
+<div align="center">
+
 # 🌍 EnvSphere
 
 > *优雅的环境变量管理器 - 让开发环境如行星般有序旋转*
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/yourusername/EnvSphere)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/MisonL/EnvSphere)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)](docs/INSTALL.md)
 
 [English](./README.md) | [中文](./docs/README.zh-CN.md)
+
+</div>
+
+<div align="center">
 
 ## ✨ 特性
 
@@ -19,25 +25,31 @@
 - **🔄 安全备份** - 自动备份，随时可回滚
 - **📦 模块化配置** - 按项目或用途组织环境变量
 
+</div>
+
+<div align="center">
+
 ## 📦 安装
 
 ### 快速安装
 
 **macOS/Linux:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 ```powershell
-iwr -useb https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.ps1 | iex
 ```
+
+</div>
 
 ### 手动安装
 
 1. 克隆仓库：
 ```bash
-git clone https://github.com/yourusername/EnvSphere.git
+git clone https://github.com/MisonL/EnvSphere.git
 cd EnvSphere
 ```
 
@@ -287,11 +299,15 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 - 📧 邮箱: support@envsphere.dev
 - 💬 Discord: [加入我们的社区](https://discord.gg/envsphere)
-- 🐛 报告问题: [GitHub Issues](https://github.com/yourusername/EnvSphere/issues)
+- 🐛 报告问题: [GitHub Issues](https://github.com/MisonL/EnvSphere/issues)
 
 ---
 
 <div align="center">
+
+## 🌟 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=MisonL/EnvSphere&type=Date)](https://star-history.com/#MisonL/EnvSphere&Date)
 
 **[⬆ 回到顶部](#-envsphere)**
 
