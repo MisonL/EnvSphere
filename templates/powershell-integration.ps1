@@ -204,7 +204,7 @@ PowerShell特有功能:
   Restore-EnvSphereFromRegistry 从注册表恢复配置
   Set-EnvSphereDirectoryWatcher 设置目录监听器
 
-更多信息: https://github.com/yourusername/EnvSphere
+更多信息: https://github.com/MisonL/EnvSphere
 "@
 }
 

@@ -130,7 +130,7 @@ Bash特有功能:
   envsphere_status            显示EnvSphere状态
   cd <directory>              自动检测并加载.envsphere文件
 
-更多信息: https://github.com/yourusername/EnvSphere
+更多信息: https://github.com/MisonL/EnvSphere
 EOF
 }
 

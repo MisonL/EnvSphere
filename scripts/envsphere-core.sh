@@ -196,7 +196,7 @@ get_system_info() {
 # 检查更新
 check_updates() {
     local current_version="${1:-}"
-    local repo="yourusername/EnvSphere"
+    local repo="MisonL/EnvSphere"
     
     if [[ -z "$current_version" ]] && [[ -f "${ENVSphere_DIR}/.version" ]]; then
         current_version=$(cat "${ENVSphere_DIR}/.version")

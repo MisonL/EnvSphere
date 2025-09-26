@@ -373,7 +373,7 @@ main() {
     print_color "${YELLOW}" "请重新加载您的shell配置或重启终端:"
     echo "  source ${shell_config}"
     echo ""
-    print_color "${BLUE}" "更多信息请查看: https://github.com/yourusername/EnvSphere"
+    print_color "${BLUE}" "更多信息请查看: https://github.com/MisonL/EnvSphere"
 }
 
 # 运行主函数

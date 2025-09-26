@@ -26,10 +26,10 @@
 
 ```bash
 # 使用 curl
-curl -fsSL https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash
 
 # 或者使用 wget
-wget -qO- https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash
 ```
 
 ### Windows
@@ -37,16 +37,16 @@ wget -qO- https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.
 #### PowerShell (推荐)
 ```powershell
 # 使用 Invoke-WebRequest
-iwr -useb https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.ps1 | iex
 
 # 或者使用 curl
-curl -fsSL https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.ps1 | powershell -Command -
+curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.ps1 | powershell -Command -
 ```
 
 #### CMD (基础支持)
 ```cmd
 # 下载安装脚本
-curl -o install.bat https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.bat
+curl -o install.bat https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.bat
 install.bat
 ```
 
@@ -55,7 +55,7 @@ install.bat
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/yourusername/EnvSphere.git
+git clone https://github.com/MisonL/EnvSphere.git
 cd EnvSphere
 ```
 
@@ -154,7 +154,7 @@ export https_proxy=http://your-proxy:port
 ./install.sh
 
 # 或者手动下载
-wget https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.sh
+wget https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh
 chmod +x install.sh
 ./install.sh
 ```
@@ -165,10 +165,10 @@ chmod +x install.sh
 
 ```bash
 # Unix系统
-curl -fsSL https://raw.githubusercontent.com/yourusername/EnvSphere/main/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/uninstall.sh | bash
 
 # Windows
-iwr -useb https://raw.githubusercontent.com/yourusername/EnvSphere/main/uninstall.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/MisonL/EnvSphere/main/uninstall.ps1 | iex
 ```
 
 或者手动运行卸载脚本：
@@ -187,7 +187,7 @@ EnvSphere会自动检查更新。要手动更新：
 envsphere update
 
 # 或者重新安装最新版本
-curl -fsSL https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash
 ```
 
 ## 验证安装
@@ -235,5 +235,5 @@ curl -fsSL https://raw.githubusercontent.com/yourusername/EnvSphere/main/install
 如果在安装过程中遇到问题：
 
 1. 查看 [故障排除](../README.md#-故障排除) 部分
-2. 在 [GitHub Issues](https://github.com/yourusername/EnvSphere/issues) 报告问题
+2. 在 [GitHub Issues](https://github.com/MisonL/EnvSphere/issues) 报告问题
 3. 加入我们的 [Discord 社区](https://discord.gg/envsphere)

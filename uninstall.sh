@@ -172,7 +172,7 @@ show_post_uninstall_info() {
     fi
     
     print_color "${BLUE}" "如需重新安装 EnvSphere，请访问:"
-    echo "  https://github.com/yourusername/EnvSphere"
+    echo "  https://github.com/MisonL/EnvSphere"
     echo ""
     
     print_color "${YELLOW}" "⚠️  请重新加载您的shell配置或重启终端:"

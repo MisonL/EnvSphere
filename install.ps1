@@ -164,7 +164,7 @@ EnvSphere - 优雅的环境变量管理器
   envsphere list              列出所有配置
   envsphere create <name>     创建新配置
 
-更多信息: https://github.com/yourusername/EnvSphere
+更多信息: https://github.com/MisonL/EnvSphere
 "@
     }
 }
@@ -282,7 +282,7 @@ function Main {
     Write-Host "请重新加载您的PowerShell配置文件或重启终端:"
     Write-Host "  . `$PROFILE"
     Write-Host ""
-    Write-Host "更多信息请查看: https://github.com/yourusername/EnvSphere" -ForegroundColor Blue
+    Write-Host "更多信息请查看: https://github.com/MisonL/EnvSphere" -ForegroundColor Blue
 }
 
 # 运行主函数

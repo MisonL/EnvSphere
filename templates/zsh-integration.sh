@@ -97,7 +97,7 @@ EnvSphere - 优雅的环境变量管理器
   envsphere_status            显示EnvSphere状态
   envsphere_help              显示此帮助信息
 
-更多信息: https://github.com/yourusername/EnvSphere
+更多信息: https://github.com/MisonL/EnvSphere
 EOF
 }
 

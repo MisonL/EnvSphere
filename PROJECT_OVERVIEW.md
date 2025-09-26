@@ -60,16 +60,16 @@ EnvSphere/
 
 ```bash
 # Unix/Linux/macOS
-curl -fsSL https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash
 
 # Windows PowerShell
-iwr -useb https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.ps1 | iex
 ```
 
 ### 手动安装
 
 ```bash
-git clone https://github.com/yourusername/EnvSphere.git
+git clone https://github.com/MisonL/EnvSphere.git
 cd EnvSphere
 ./install.sh
 ```

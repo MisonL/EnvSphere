@@ -122,5 +122,5 @@ echo   envsphere list              列出所有配置
 echo   envsphere create ^<name^>    创建新配置
 echo   envsphere help              显示帮助信息
 echo.
-echo 更多信息: https://github.com/yourusername/EnvSphere
+echo 更多信息: https://github.com/MisonL/EnvSphere
 exit /b 0

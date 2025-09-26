@@ -220,7 +220,7 @@ jobs:
     
     - name: Install EnvSphere
       run: |
-        curl -fsSL https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.sh | bash
+        curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash
         echo "$HOME/.envsphere/bin" >> $GITHUB_PATH
     
     - name: Load Production Config
@@ -247,7 +247,7 @@ jobs:
 FROM node:18
 
 # 安装EnvSphere
-RUN curl -fsSL https://raw.githubusercontent.com/yourusername/EnvSphere/main/install.sh | bash
+RUN curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash
 
 # 复制配置文件
 COPY profiles/ /root/.envsphere/profiles/
