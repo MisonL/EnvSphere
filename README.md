@@ -12,8 +12,6 @@
 
 </div>
 
-<div align="center">
-
 ## ✨ 特性
 
 - **🚀 一键安装** - 一行命令完成安装和配置
@@ -24,10 +22,6 @@
 - **🎨 优雅界面** - 彩色输出，友好的用户体验
 - **🔄 安全备份** - 自动备份，随时可回滚
 - **📦 模块化配置** - 按项目或用途组织环境变量
-
-</div>
-
-<div align="center">
 
 ## 📦 安装
 
@@ -42,8 +36,6 @@ curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | 
 ```powershell
 iwr -useb https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.ps1 | iex
 ```
-
-</div>
 
 ### 手动安装
 
