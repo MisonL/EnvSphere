@@ -269,6 +269,52 @@ integrate_shell() {
     
     print_color "${BLUE}" "正在集成到 ${shell_type} 配置..."
     
+    # 检查文件权限
+    if [[ ! -w "$shell_config" ]] && [[ -f "$shell_config" ]]; then
+        print_color "${YELLOW}" "⚠️  无法写入 $shell_config (权限不足)"
+        print_color "${CYAN}" "将使用替代方案..."
+        
+        # 创建个人启动脚本
+        local personal_init="$HOME/.envsphere/init.sh"
+        
+        cat > "$personal_init" << EOF
+# EnvSphere - 环境变量管理器
+export PATH="\$HOME/.envsphere/bin:\$PATH"
+# 启用EnvSphere自动补全（如果可用）
+[[ -f "\$HOME/.envsphere/completions/envsphere.${shell_type}" ]] && source "\$HOME/.envsphere/completions/envsphere.${shell_type}"
+
+# 如果已安装，加载EnvSphere核心功能
+if [[ -f "\$HOME/.envsphere/scripts/envsphere-core.sh" ]]; then
+    source "\$HOME/.envsphere/scripts/envsphere-core.sh"
+fi
+EOF
+        
+        chmod +x "$personal_init"
+        
+        print_color "${GREEN}" "✓ 已创建个人初始化脚本: $personal_init"
+        print_color "${CYAN}" "\n请在您的 shell 配置文件中添加以下内容："
+        echo
+        echo "# EnvSphere (替代安装方案)"
+        echo "[[ -f \"$personal_init\" ]] && source \"$personal_init\""
+        echo
+        
+        # 提供手动添加的说明
+        case "$shell_type" in
+            "zsh")
+                echo "添加到 ~/.zshrc:"
+                echo "echo '[[ -f \"$personal_init\" ]] && source \"$personal_init\"' >> ~/.zshrc"
+                echo "然后运行: source ~/.zshrc"
+                ;;
+            "bash")
+                echo "添加到 ~/.bashrc 或 ~/.bash_profile:"
+                echo "echo '[[ -f \"$personal_init\" ]] && source \"$personal_init\"' >> ~/.bashrc"
+                echo "然后运行: source ~/.bashrc"
+                ;;
+        esac
+        
+        return 0
+    fi
+    
     # 检查是否已集成
     if grep -q "EnvSphere" "$shell_config" 2>/dev/null; then
         print_color "${YELLOW}" "EnvSphere 已存在于 ${shell_config} 中，跳过集成"
@@ -276,17 +322,19 @@ integrate_shell() {
     fi
     
     # 备份原配置文件
-    cp "$shell_config" "${ENVSphere_BACKUP_DIR}/$(basename "$shell_config").backup.$(date +%Y%m%d_%H%M%S)"
+    cp "$shell_config" "${ENVSphere_BACKUP_DIR}/$(basename "$shell_config").backup.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || {
+        print_color "$YELLOW" "⚠️  无法备份配置文件，继续安装..."
+    }
     
     # 添加EnvSphere集成
-    cat >> "$shell_config" << EOF
-
-# EnvSphere - 环境变量管理器
-export PATH="\$HOME/.envsphere/bin:\$PATH"
-# 启用EnvSphere自动补全（如果可用）
-[[ -f "\$HOME/.envsphere/completions/envsphere.${shell_type}" ]] && source "\$HOME/.envsphere/completions/envsphere.${shell_type}"
-
-EOF
+    {
+        echo ""
+        echo "# EnvSphere - 环境变量管理器"
+        echo "export PATH=\"\$HOME/.envsphere/bin:\$PATH\""
+        echo "# 启用EnvSphere自动补全（如果可用）"
+        echo "[[ -f \"\$HOME/.envsphere/completions/envsphere.${shell_type}\" ]] && source \"\$HOME/.envsphere/completions/envsphere.${shell_type}\""
+        echo ""
+    } >> "$shell_config"
     
     print_color "${GREEN}" "✓ 已成功集成到 ${shell_config}"
 }
@@ -365,15 +413,47 @@ main() {
     echo ""
     print_color "${GREEN}${BOLD}" "🎉 EnvSphere 安装成功！"
     echo ""
-    print_color "${CYAN}" "使用方法:"
-    echo "  envsphere list              # 查看可用配置"
-    echo "  envsphere load <profile>    # 加载配置"
-    echo "  envsphere create <name>     # 创建新配置"
+    print_color "${CYAN}" "=== 快速开始教程 ==="
     echo ""
-    print_color "${YELLOW}" "请重新加载您的shell配置或重启终端:"
-    echo "  source ${shell_config}"
+    echo "1. 重新加载您的shell配置或重启终端:"
+    if [[ -n "$shell_config" ]]; then
+        echo "   source ${shell_config}"
+    fi
     echo ""
-    print_color "${BLUE}" "更多信息请查看: https://github.com/MisonL/EnvSphere"
+    echo "2. 分析您当前的环境变量:"
+    echo "   envsphere analyze"
+    echo ""
+    echo "3. 运行迁移向导（推荐）:"
+    echo "   envsphere migrate"
+    echo ""
+    echo "4. 查看可用配置:"
+    echo "   envsphere list"
+    echo ""
+    echo "5. 加载配置:"
+    echo "   envsphere load development    # 加载开发环境"
+    echo "   envsphere load api-keys       # 加载API密钥"
+    echo ""
+    echo "快捷方式:"
+    echo "   es ls                         # 列出配置"
+    echo "   es load dev                   # 加载开发配置"
+    echo ""
+    print_color "${YELLOW}" "=== 详细教程 ==="
+    echo ""
+    print_color "${CYAN}" "📚 完整文档: https://github.com/MisonL/EnvSphere"
+    echo ""
+    print_color "${CYAN}" "🎥 视频教程: https://github.com/MisonL/EnvSphere#tutorial"
+    echo ""
+    print_color "${CYAN}" "💡 高级用法:"
+    echo "   - 在项目目录创建 .envsphere 文件实现自动加载"
+    echo "   - 使用 envsphere create <name> 创建自定义配置"
+    echo "   - 编辑 ~/.envsphere/profiles/ 下的配置文件"
+    echo ""
+    print_color "${RED}" "⚠️  重要提示:"
+    echo "   - 不要将真实的API密钥提交到版本控制"
+    echo "   - 定期备份您的配置文件"
+    echo "   - 使用 envsphere migrate 时仔细检查要迁移的变量"
+    echo ""
+    print_color "${GREEN}" "🚀 开始使用 EnvSphere 管理您的环境变量吧！"
 }
 
 # 运行主函数
