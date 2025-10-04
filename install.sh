@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 
-# EnvSphere - 优雅的环境变量管理器
-# 一键安装脚本
-# 支持: macOS, Linux, Windows(WSL/Git Bash)
-# 支持终端: zsh, bash, fish
+# EnvSphere - 简洁的环境变量管理器
+# 基于loadenv模式的一键安装脚本
+# 复刻用户主机上的环境变量管理模式
 
 set -euo pipefail
 
@@ -12,64 +11,13 @@ readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[0;33m'
 readonly BLUE='\033[0;34m'
-readonly PURPLE='\033[0;35m'
 readonly CYAN='\033[0;36m'
-readonly WHITE='\033[0;37m'
-readonly BOLD='\033[1m'
 readonly RESET='\033[0m'
 
 # 安装配置
 readonly ENVSphere_VERSION="1.0.0"
-readonly ENVSphere_DIR="${HOME}/.envsphere"
-readonly ENVSphere_BIN_DIR="${ENVSphere_DIR}/bin"
-readonly ENVSphere_PROFILES_DIR="${ENVSphere_DIR}/profiles"
-readonly ENVSphere_BACKUP_DIR="${ENVSphere_DIR}/backups"
-
-# 检测系统信息
-detect_system() {
-    local os=""
-    local arch=""
-    local shell_type=""
-    local shell_config=""
-
-    # 检测操作系统
-    case "$(uname -s)" in
-        Darwin*) os="macos" ;;
-        Linux*) os="linux" ;;
-        CYGWIN*|MINGW*|MSYS*) os="windows" ;;
-        *) os="unknown" ;;
-    esac
-
-    # 检测架构
-    case "$(uname -m)" in
-        x86_64|amd64) arch="x64" ;;
-        i386|i686) arch="x86" ;;
-        arm64|aarch64) arch="arm64" ;;
-        arm*) arch="arm" ;;
-        *) arch="unknown" ;;
-    esac
-
-    # 检测Shell类型
-    if [ -n "${ZSH_VERSION:-}" ]; then
-        shell_type="zsh"
-        shell_config="${HOME}/.zshrc"
-    elif [ -n "${BASH_VERSION:-}" ]; then
-        shell_type="bash"
-        shell_config="${HOME}/.bashrc"
-        # 检查是否存在.bash_profile（macOS默认）
-        if [ "${os}" = "macos" ] && [ -f "${HOME}/.bash_profile" ]; then
-            shell_config="${HOME}/.bash_profile"
-        fi
-    elif [ "${SHELL##*/}" = "fish" ]; then
-        shell_type="fish"
-        shell_config="${HOME}/.config/fish/config.fish"
-    else
-        shell_type="unknown"
-        shell_config=""
-    fi
-
-    echo "${os} ${arch} ${shell_type} ${shell_config}"
-}
+readonly ENV_PROFILES_DIR="$HOME/.env_profiles"
+readonly ENV_LOADER_FILE="$HOME/.env_loader"
 
 # 打印彩色输出
 print_color() {
@@ -81,180 +29,315 @@ print_color() {
 # 打印标题
 print_header() {
     echo ""
-    print_color "${CYAN}${BOLD}" "╔══════════════════════════════════════════════════════╗"
-    print_color "${CYAN}${BOLD}" "║                  EnvSphere Installer                 ║"
-    print_color "${CYAN}${BOLD}" "║          优雅的环境变量管理器 v${ENVSphere_VERSION}              ║"
-    print_color "${CYAN}${BOLD}" "╚══════════════════════════════════════════════════════╝"
+    print_color "$CYAN" "╔══════════════════════════════════════════════════════╗"
+    print_color "$CYAN" "║              EnvSphere 安装程序                      ║"
+    print_color "$CYAN" "║          简洁的环境变量管理器 v${ENVSphere_VERSION}              ║"
+    print_color "$CYAN" "╚══════════════════════════════════════════════════════╝"
     echo ""
 }
 
-# 检查依赖
-check_dependencies() {
-    local deps=("curl" "grep" "sed" "awk")
-    local missing_deps=()
+# 检测系统类型
+detect_system() {
+    local os="unknown"
+    local is_wsl=false
+    local distro="unknown"
+    local windows_env="unknown"
+    
+    # 检测操作系统
+    case "$(uname -s)" in
+        Darwin*) 
+            os="macos"
+            ;;
+        Linux*) 
+            # 检测WSL环境（仅在Linux系统上）
+            if grep -qi microsoft /proc/version 2>/dev/null || [ -n "${WSL_DISTRO_NAME:-}" ] || [ -n "${WSLENV:-}" ]; then
+                is_wsl=true
+                os="wsl"
+            else
+                # 检测Linux发行版
+                if [ -f /etc/os-release ]; then
+                    # 读取发行版信息
+                    . /etc/os-release
+                    case "$ID" in
+                        ubuntu|debian)
+                            os="ubuntu"
+                            distro="$ID"
+                            ;;
+                        centos|rhel|fedora|rocky|almalinux)
+                            os="centos"
+                            distro="$ID"
+                            ;;
+                        alpine)
+                            os="alpine"
+                            distro="$ID"
+                            ;;
+                        arch|manjaro)
+                            os="arch"
+                            distro="$ID"
+                            ;;
+                        opensuse*|suse*)
+                            os="suse"
+                            distro="$ID"
+                            ;;
+                        *)
+                            os="linux"
+                            distro="$ID"
+                            ;;
+                    esac
+                elif [ -f /etc/redhat-release ]; then
+                    # CentOS/RHEL旧版本
+                    if grep -qi "centos" /etc/redhat-release; then
+                        os="centos"
+                        distro="centos"
+                    elif grep -qi "red hat" /etc/redhat-release; then
+                        os="centos" 
+                        distro="rhel"
+                    fi
+                elif [ -f /etc/debian_version ]; then
+                    # Debian/Ubuntu旧版本
+                    if [ -f /etc/lsb-release ]; then
+                        . /etc/lsb-release
+                        if [ "$DISTRIB_ID" = "Ubuntu" ]; then
+                            os="ubuntu"
+                            distro="ubuntu"
+                        fi
+                    else
+                        os="ubuntu"
+                        distro="debian"
+                    fi
+                else
+                    os="linux"
+                    distro="unknown"
+                fi
+            fi
+            ;;
+        CYGWIN*) 
+            os="windows"
+            windows_env="cygwin"
+            ;;
+        MINGW*|MSYS*)
+            os="windows"
+            # 检测Git for Windows vs MSYS2
+            if [ -n "${MSYSTEM:-}" ]; then
+                # MSYS2环境
+                windows_env="msys2"
+                distro="msys2"
+            elif [ -f /etc/gitconfig ] || [ -d /git ]; then
+                # Git for Windows环境
+                windows_env="git"
+                distro="git-for-windows"
+            else
+                # 普通MinGW环境
+                windows_env="mingw"
+                distro="mingw"
+            fi
+            ;;
+        *) 
+            os="unknown"
+            distro="unknown"
+            windows_env="unknown"
+            ;;
+    esac
+    
+    echo "$os $is_wsl $distro $windows_env"
+}
 
-    for dep in "${deps[@]}"; do
-        if ! command -v "${dep}" &> /dev/null; then
-            missing_deps+=("${dep}")
-        fi
-    done
-
-    if [ ${#missing_deps[@]} -ne 0 ]; then
-        print_color "${RED}" "错误: 缺少必要的依赖工具: ${missing_deps[*]}"
-        print_color "${YELLOW}" "请先安装这些工具后再运行安装脚本"
-        exit 1
+# 检测Shell类型和配置文件
+detect_shell() {
+    local shell_type=""
+    local shell_config=""
+    local system_info=$(detect_system)
+    local os=$(echo "$system_info" | cut -d' ' -f1)
+    local windows_env=$(echo "$system_info" | cut -d' ' -f4)
+    
+    # 检测Shell类型
+    if [ -n "${ZSH_VERSION:-}" ]; then
+        shell_type="zsh"
+        shell_config="$HOME/.zshrc"
+    elif [ -n "${BASH_VERSION:-}" ]; then
+        shell_type="bash"
+        
+        # 根据不同系统和环境选择正确的配置文件
+        case "$os" in
+            "macos")
+                # macOS 默认使用 .bash_profile
+                if [ -f "$HOME/.bash_profile" ]; then
+                    shell_config="$HOME/.bash_profile"
+                elif [ -f "$HOME/.bashrc" ]; then
+                    shell_config="$HOME/.bashrc"
+                else
+                    shell_config="$HOME/.bash_profile"
+                fi
+                ;;
+            "linux"|"wsl")
+                # Linux 和 WSL 使用 .bashrc
+                if [ -f "$HOME/.bashrc" ]; then
+                    shell_config="$HOME/.bashrc"
+                elif [ -f "$HOME/.bash_profile" ]; then
+                    shell_config="$HOME/.bash_profile"
+                else
+                    shell_config="$HOME/.bashrc"
+                fi
+                ;;
+            "windows")
+                # Windows环境 (Git Bash, MSYS2, Cygwin)
+                case "$windows_env" in
+                    "git")
+                        # Git for Windows
+                        if [ -f "$HOME/.bash_profile" ]; then
+                            shell_config="$HOME/.bash_profile"
+                        elif [ -f "$HOME/.bashrc" ]; then
+                            shell_config="$HOME/.bashrc"
+                        else
+                            shell_config="$HOME/.bash_profile"
+                        fi
+                        ;;
+                    "msys2")
+                        # MSYS2环境
+                        if [ -f "$HOME/.bashrc" ]; then
+                            shell_config="$HOME/.bashrc"
+                        elif [ -f "$HOME/.bash_profile" ]; then
+                            shell_config="$HOME/.bash_profile"
+                        else
+                            shell_config="$HOME/.bashrc"
+                        fi
+                        ;;
+                    "cygwin")
+                        # Cygwin环境
+                        if [ -f "$HOME/.bashrc" ]; then
+                            shell_config="$HOME/.bashrc"
+                        elif [ -f "$HOME/.bash_profile" ]; then
+                            shell_config="$HOME/.bash_profile"
+                        else
+                            shell_config="$HOME/.bashrc"
+                        fi
+                        ;;
+                    *)
+                        # 其他Windows bash环境
+                        shell_config="$HOME/.bashrc"
+                        ;;
+                esac
+                ;;
+            *)
+                # 其他系统，默认使用 .bashrc
+                shell_config="$HOME/.bashrc"
+                ;;
+        esac
+    else
+        shell_type="unknown"
+        shell_config=""
     fi
+    
+    echo "$shell_type $shell_config"
 }
 
 # 创建目录结构
 create_directories() {
-    print_color "${BLUE}" "正在创建EnvSphere目录结构..."
+    print_color "$BLUE" "正在创建目录结构..."
     
-    mkdir -p "${ENVSphere_DIR}"/{bin,scripts,templates,profiles,backups}
-    
-    # 创建隐藏标记文件
-    echo "${ENVSphere_VERSION}" > "${ENVSphere_DIR}/.version"
-    
-    print_color "${GREEN}" "✓ 目录结构创建完成"
+    mkdir -p "$ENV_PROFILES_DIR"
+    print_color "$GREEN" "✓ 创建目录: $ENV_PROFILES_DIR"
 }
 
-# 下载并安装核心脚本
-install_core_scripts() {
-    print_color "${BLUE}" "正在安装EnvSphere核心脚本..."
+# 创建env_loader文件（复刻用户的函数）
+create_env_loader() {
+    print_color "$BLUE" "正在创建环境变量加载器..."
     
-    # 复制脚本文件到安装目录
-    local script_dir="${BASH_SOURCE%/*}"
-    
-    # 复制核心功能脚本
-    if [[ -f "$script_dir/scripts/envsphere-core.sh" ]]; then
-        cp "$script_dir/scripts/envsphere-core.sh" "${ENVSphere_DIR}/scripts/"
-    fi
-    
-    # 复制分析器脚本
-    if [[ -f "$script_dir/scripts/env-analyzer.sh" ]]; then
-        cp "$script_dir/scripts/env-analyzer.sh" "${ENVSphere_DIR}/scripts/"
-        chmod +x "${ENVSphere_DIR}/scripts/env-analyzer.sh"
-    fi
-    
-    # 复制交互式CLI脚本
-    if [[ -f "$script_dir/scripts/interactive-cli.sh" ]]; then
-        cp "$script_dir/scripts/interactive-cli.sh" "${ENVSphere_DIR}/scripts/"
-        chmod +x "${ENVSphere_DIR}/scripts/interactive-cli.sh"
-    fi
-    
-    # 复制模板文件
-    if [[ -d "$script_dir/templates" ]]; then
-        cp "$script_dir/templates/"*.sh "${ENVSphere_DIR}/templates/" 2>/dev/null || true
-        cp "$script_dir/templates/"*.ps1 "${ENVSphere_DIR}/templates/" 2>/dev/null || true
-    fi
-    
-    # 创建核心加载器
-    cat > "${ENVSphere_BIN_DIR}/envsphere" << 'EOF'
-#!/usr/bin/env bash
-# EnvSphere 核心加载器
+    cat > "$ENV_LOADER_FILE" << 'EOF'
+# 环境变量加载器
+# 用法：loadenv [profile_name] 或 loadenv -l 或 loadenv -a
 
-ENVSphere_DIR="${HOME}/.envsphere"
-ENVSphere_PROFILES_DIR="${ENVSphere_DIR}/profiles"
-
-# 加载核心功能
-if [[ -f "${ENVSphere_DIR}/scripts/envsphere-core.sh" ]]; then
-    source "${ENVSphere_DIR}/scripts/envsphere-core.sh"
-fi
-
-# 主要功能函数
-envsphere_load() {
-    local profile="$1"
-    if command -v load_profile &> /dev/null; then
-        load_profile "$profile"
-    else
-        local profile_file="${ENVSphere_PROFILES_DIR}/${profile}.env"
-        if [[ -f "$profile_file" ]]; then
-            echo "正在加载环境配置: ${profile}"
-            source "$profile_file"
-            export ENVSphere_ACTIVE_PROFILE="$profile"
-            echo "✓ 配置加载成功"
-        else
-            echo "错误: 找不到配置文件 ${profile_file}"
+env_profile() {
+    local profile_dir="$HOME/.env_profiles"
+    
+    case "$1" in
+        -l|--list)
+            echo "可用的环境变量配置："
+            ls "$profile_dir"/*.env 2>/dev/null | xargs -n 1 basename -s .env | sed 's/^/  - /'
+            ;;
+        -a|--all)
+            echo "加载所有环境变量配置..."
+            for env_file in "$profile_dir"/*.env; do
+                if [ -f "$env_file" ]; then
+                    local name=$(basename "$env_file" .env)
+                    echo "  加载 $name 配置..."
+                    source "$env_file"
+                fi
+            done
+            echo "所有环境变量配置加载完成！"
+            ;;
+        -h|--help)
+            echo "用法："
+            echo "  loadenv [profile]     加载指定的环境变量配置"
+            echo "  loadenv -l, --list    列出所有可用配置"
+            echo "  loadenv -a, --all     加载所有配置"
+            echo "  loadenv -h, --help    显示帮助信息"
+            ;;
+        "")
+            echo "错误：请指定要加载的配置文件"
+            echo "可用配置："
+            ls "$profile_dir"/*.env 2>/dev/null | xargs -n 1 basename -s .env | sed 's/^/  - /'
             return 1
-        fi
-    fi
+            ;;
+        *)
+            local env_file="$profile_dir/$1.env"
+            if [ -f "$env_file" ]; then
+                echo "加载 $1 环境变量配置..."
+                source "$env_file"
+                echo "✓ $1 环境变量配置加载成功！"
+            else
+                echo "错误：找不到配置文件 $env_file"
+                echo "可用配置："
+                ls "$profile_dir"/*.env 2>/dev/null | xargs -n 1 basename -s .env | sed 's/^/  - /'
+                return 1
+            fi
+            ;;
+    esac
 }
 
-envsphere_list() {
-    echo "可用的环境配置："
-    for file in "${ENVSphere_PROFILES_DIR}"/*.env; do
-        if [[ -f "$file" ]]; then
-            local name=$(basename "$file" .env)
-            echo "  - ${name}"
-        fi
-    done
-}
+# 创建loadenv alias指向函数
+alias loadenv='env_profile'
 
-envsphere_create() {
-    local name="$1"
-    local profile_file="${ENVSphere_PROFILES_DIR}/${name}.env"
-    
-    if [[ -f "$profile_file" ]]; then
-        echo "警告: 配置文件已存在，将覆盖: ${profile_file}"
-        read -p "继续吗? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            return 1
-        fi
-    fi
-    
-    # 创建新的配置文件
-    cat > "$profile_file" << EOL
-# EnvSphere Profile: $name
-# 创建于: $(date)
-
-# 在此添加环境变量
-# export VARIABLE_NAME="value"
-
-EOL
-    
-    echo "✓ 配置文件已创建: ${profile_file}"
-    echo "请编辑该文件并添加您的环境变量"
-}
-
-# 主命令处理
-case "$1" in
-    load)
-        if [[ -z "$2" ]]; then
-            echo "用法: envsphere load <profile>"
-            exit 1
-        fi
-        envsphere_load "$2"
-        ;;
-    list|ls)
-        envsphere_list
-        ;;
-    create|new)
-        if [[ -z "$2" ]]; then
-            echo "用法: envsphere create <profile>"
-            exit 1
-        fi
-        envsphere_create "$2"
-        ;;
-    *)
-        echo "EnvSphere - 优雅的环境变量管理器"
-        echo ""
-        echo "用法:"
-        echo "  envsphere load <profile>  加载环境配置"
-        echo "  envsphere list            列出所有配置"
-        echo "  envsphere create <name>   创建新配置"
-        echo ""
-        ;;
-esac
+# 快速加载常用配置的alias
+alias load-all-env='env_profile --all'
+alias list-envs='env_profile --list'
 EOF
 
-    chmod +x "${ENVSphere_BIN_DIR}/envsphere"
+    chmod +x "$ENV_LOADER_FILE"
+    print_color "$GREEN" "✓ 创建环境变量加载器: $ENV_LOADER_FILE"
+}
+
+# 创建示例配置文件
+create_sample_profiles() {
+    print_color "$BLUE" "正在创建示例配置文件..."
     
-    # 创建分析器命令链接
-    ln -sf "${ENVSphere_DIR}/scripts/env-analyzer.sh" "${ENVSphere_BIN_DIR}/envsphere-analyze" 2>/dev/null || true
-    ln -sf "${ENVSphere_DIR}/scripts/interactive-cli.sh" "${ENVSphere_BIN_DIR}/envsphere-migrate" 2>/dev/null || true
-    
-    print_color "${GREEN}" "✓ 核心脚本安装完成"
+    # 开发环境示例
+    cat > "$ENV_PROFILES_DIR/development.env" << 'EOF'
+# 开发环境配置
+export NODE_ENV="development"
+export DEBUG="true"
+export LOG_LEVEL="debug"
+EOF
+
+    # API密钥模板
+    cat > "$ENV_PROFILES_DIR/api-keys.env" << 'EOF'
+# API密钥配置模板
+# 请替换为实际的API密钥
+
+# 示例：
+# export OPENAI_API_KEY="your-api-key-here"
+# export GITHUB_TOKEN="your-github-token-here"
+EOF
+
+    # Claude配置示例（基于你的现有配置）
+    cat > "$ENV_PROFILES_DIR/claude.env" << 'EOF'
+# Claude Code 环境变量配置
+export ANTHROPIC_API_KEY="your-api-key-here"
+export ANTHROPIC_BASE_URL="https://www.k2sonnet.com/api/claudecode"
+export CLAUDE_FORCE_ENV="true"
+EOF
+
+    print_color "$GREEN" "✓ 创建示例配置文件完成"
 }
 
 # 集成到Shell配置
@@ -263,114 +346,126 @@ integrate_shell() {
     local shell_type="$2"
     
     if [[ -z "$shell_config" ]]; then
-        print_color "${YELLOW}" "警告: 无法检测到Shell配置文件"
+        print_color "$YELLOW" "警告: 无法检测到Shell配置文件"
         return 1
     fi
     
-    print_color "${BLUE}" "正在集成到 ${shell_type} 配置..."
-    
-    # 检查文件权限
-    if [[ ! -w "$shell_config" ]] && [[ -f "$shell_config" ]]; then
-        print_color "${YELLOW}" "⚠️  无法写入 $shell_config (权限不足)"
-        print_color "${CYAN}" "将使用替代方案..."
-        
-        # 创建个人启动脚本
-        local personal_init="$HOME/.envsphere/init.sh"
-        
-        cat > "$personal_init" << EOF
-# EnvSphere - 环境变量管理器
-export PATH="\$HOME/.envsphere/bin:\$PATH"
-# 启用EnvSphere自动补全（如果可用）
-[[ -f "\$HOME/.envsphere/completions/envsphere.${shell_type}" ]] && source "\$HOME/.envsphere/completions/envsphere.${shell_type}"
-
-# 如果已安装，加载EnvSphere核心功能
-if [[ -f "\$HOME/.envsphere/scripts/envsphere-core.sh" ]]; then
-    source "\$HOME/.envsphere/scripts/envsphere-core.sh"
-fi
-EOF
-        
-        chmod +x "$personal_init"
-        
-        print_color "${GREEN}" "✓ 已创建个人初始化脚本: $personal_init"
-        print_color "${CYAN}" "\n请在您的 shell 配置文件中添加以下内容："
-        echo
-        echo "# EnvSphere (替代安装方案)"
-        echo "[[ -f \"$personal_init\" ]] && source \"$personal_init\""
-        echo
-        
-        # 提供手动添加的说明
-        case "$shell_type" in
-            "zsh")
-                echo "添加到 ~/.zshrc:"
-                echo "echo '[[ -f \"$personal_init\" ]] && source \"$personal_init\"' >> ~/.zshrc"
-                echo "然后运行: source ~/.zshrc"
-                ;;
-            "bash")
-                echo "添加到 ~/.bashrc 或 ~/.bash_profile:"
-                echo "echo '[[ -f \"$personal_init\" ]] && source \"$personal_init\"' >> ~/.bashrc"
-                echo "然后运行: source ~/.bashrc"
-                ;;
-        esac
-        
-        return 0
-    fi
+    print_color "$BLUE" "正在集成到 $shell_type 配置..."
     
     # 检查是否已集成
-    if grep -q "EnvSphere" "$shell_config" 2>/dev/null; then
-        print_color "${YELLOW}" "EnvSphere 已存在于 ${shell_config} 中，跳过集成"
+    if grep -q "加载环境变量管理器" "$shell_config" 2>/dev/null; then
+        print_color "$YELLOW" "环境变量管理器已存在，跳过集成"
         return 0
     fi
     
-    # 备份原配置文件
-    cp "$shell_config" "${ENVSphere_BACKUP_DIR}/$(basename "$shell_config").backup.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || {
-        print_color "$YELLOW" "⚠️  无法备份配置文件，继续安装..."
-    }
-    
-    # 添加EnvSphere集成
+    # 添加到shell配置文件
     {
         echo ""
-        echo "# EnvSphere - 环境变量管理器"
-        echo "export PATH=\"\$HOME/.envsphere/bin:\$PATH\""
-        echo "# 启用EnvSphere自动补全（如果可用）"
-        echo "[[ -f \"\$HOME/.envsphere/completions/envsphere.${shell_type}\" ]] && source \"\$HOME/.envsphere/completions/envsphere.${shell_type}\""
-        echo ""
+        echo "# 加载环境变量管理器"
+        echo "if [ -f ~/.env_loader ]; then"
+        echo "    source ~/.env_loader"
+        echo "fi"
     } >> "$shell_config"
     
-    print_color "${GREEN}" "✓ 已成功集成到 ${shell_config}"
+    print_color "$GREEN" "✓ 已集成到 $shell_config"
 }
 
-# 创建示例配置
-create_sample_profiles() {
-    print_color "${BLUE}" "正在创建示例配置文件..."
+# 显示实施方案
+show_implementation_plan() {
+    local os="$1"
+    local shell_type="$2" 
+    local shell_config="$3"
+    local distro="$4"
+    local windows_env="$5"
     
-    # 创建开发环境示例
-    cat > "${ENVSphere_PROFILES_DIR}/development.env" << 'EOF'
-# 开发环境配置示例
-export NODE_ENV="development"
-export DEBUG="true"
-export LOG_LEVEL="debug"
+    print_color "$CYAN" "╔══════════════════════════════════════════════════════╗"
+    print_color "$CYAN" "║                  实施方案预览                        ║"
+    print_color "$CYAN" "╚══════════════════════════════════════════════════════╝"
+    echo ""
+    
+    print_color "$BLUE" "📋 实施步骤："
+    echo ""
+    
+    echo "1. 📁 创建目录结构："
+    echo "   - 创建 ~/.env_profiles/ 目录"
+    echo "   - 创建 ~/.env_loader 文件"
+    echo ""
+    
+    echo "2. ⚙️ 生成配置文件："
+    echo "   - 创建 development.env (开发环境示例)"
+    echo "   - 创建 api-keys.env (API密钥模板)"
+    echo "   - 创建 claude.env (Claude配置示例)"
+    echo ""
+    
+    echo "3. 🔗 集成到Shell："
+    if [ -n "$shell_config" ]; then
+        echo "   - 添加到 $shell_config"
+        echo "   - 添加环境变量加载器集成"
+    else
+        echo "   - 无法自动检测Shell配置文件"
+        echo "   - 需要手动添加集成代码"
+    fi
+    echo ""
+    
+    echo "4. 🎯 创建快捷命令："
+    echo "   - loadenv (加载环境配置)"
+    echo "   - load-all-env (加载所有配置)"
+    echo "   - list-envs (列出可用配置)"
+    echo ""
+    
+    print_color "$BLUE" "🔍 系统信息："
+    echo "   操作系统: $os"
+    if [ "$distro" != "unknown" ]; then
+        echo "   发行版: $distro"
+    fi
+    if [ -n "$shell_type" ] && [ "$shell_type" != "unknown" ]; then
+        echo "   Shell类型: $shell_type"
+        echo "   配置文件: $shell_config"
+    fi
+    if [ "$windows_env" != "unknown" ]; then
+        echo "   Windows环境: $windows_env"
+    fi
+    echo ""
+    
+    print_color "$YELLOW" "⚠️  注意事项："
+    echo "   - 安装将修改您的shell配置文件"
+    echo "   - 建议先备份重要配置"
+    echo "   - 安装完成后需要重新加载shell配置"
+    echo ""
+}
 
-# 开发工具路径
-export EDITOR="vim"
-export PAGER="less"
-EOF
-
-    # 创建API密钥示例
-    cat > "${ENVSphere_PROFILES_DIR}/api-keys.env" << 'EOF'
-# API密钥配置
-# 请将以下示例替换为实际的API密钥
-
-# GitHub
-# export GITHUB_TOKEN="your_github_token_here"
-
-# OpenAI
-# export OPENAI_API_KEY="your_openai_api_key_here"
-
-# 其他API
-# export CUSTOM_API_KEY="your_api_key_here"
-EOF
-
-    print_color "${GREEN}" "✓ 示例配置文件创建完成"
+# 交互式确认
+interactive_confirmation() {
+    echo ""
+    print_color "$CYAN" "请确认是否继续安装？"
+    echo ""
+    echo "  输入 y 或 yes  - 继续执行安装"
+    echo "  输入 n 或 no   - 取消安装"
+    echo "  输入其他       - 重新显示此提示"
+    echo ""
+    echo -n "您的选择: "
+    read -r response
+    
+    case "$response" in
+        [Yy]|[Yy][Ee][Ss])
+            return 0
+            ;;
+        [Nn]|[Nn][Oo]|"")
+            print_color "$YELLOW" ""
+            print_color "$YELLOW" "╔══════════════════════════════════════════════════════╗"
+            print_color "$YELLOW" "║                  安装已取消                          ║"
+            print_color "$YELLOW" "║                                                      ║"
+            print_color "$YELLOW" "║  如果需要安装，请重新运行:                          ║"
+            print_color "$YELLOW" "║  ./install.sh                                        ║"
+            print_color "$YELLOW" "╚══════════════════════════════════════════════════════╝"
+            exit 0
+            ;;
+        *)
+            echo ""
+            print_color "$YELLOW" "无效输入，请重新选择"
+            interactive_confirmation
+            ;;
+    esac
 }
 
 # 主安装流程
@@ -378,82 +473,89 @@ main() {
     print_header
     
     # 检测系统信息
-    local system_info
-    system_info=$(detect_system)
+    local system_info=$(detect_system)
     local os=$(echo "$system_info" | cut -d' ' -f1)
-    local arch=$(echo "$system_info" | cut -d' ' -f2)
-    local shell_type=$(echo "$system_info" | cut -d' ' -f3)
-    local shell_config=$(echo "$system_info" | cut -d' ' -f4)
+    local is_wsl=$(echo "$system_info" | cut -d' ' -f2)
+    local distro=$(echo "$system_info" | cut -d' ' -f3)
+    local windows_env=$(echo "$system_info" | cut -d' ' -f4)
     
-    print_color "${CYAN}" "系统信息:"
-    echo "  操作系统: ${os}"
-    echo "  架构: ${arch}"
-    echo "  Shell类型: ${shell_type}"
-    echo "  配置文件: ${shell_config}"
+    local shell_info=$(detect_shell)
+    local shell_type=$(echo "$shell_info" | cut -d' ' -f1)
+    local shell_config=$(echo "$shell_info" | cut -d' ' -f2)
+    
+    print_color "$CYAN" "系统信息:"
+    echo "  操作系统: $os"
+    if [ "$distro" != "unknown" ] && [ "$os" = "ubuntu" ] || [ "$os" = "centos" ] || [ "$os" = "alpine" ] || [ "$os" = "arch" ] || [ "$os" = "suse" ]; then
+        echo "  发行版: $distro"
+    fi
+    if [ "$is_wsl" = "true" ]; then
+        echo "  WSL环境: 是"
+    fi
+    if [ "$os" = "windows" ] && [ "$windows_env" != "unknown" ]; then
+        case "$windows_env" in
+            "git")
+                echo "  Windows环境: Git for Windows"
+                ;;
+            "msys2")
+                echo "  Windows环境: MSYS2"
+                ;;
+            "mingw")
+                echo "  Windows环境: MinGW"
+                ;;
+            "cygwin")
+                echo "  Windows环境: Cygwin"
+                ;;
+        esac
+    fi
+    echo "  Shell类型: $shell_type"
+    echo "  配置文件: $shell_config"
     echo ""
     
-    # 检查依赖
-    check_dependencies
+    # 显示实施方案
+    show_implementation_plan "$os" "$shell_type" "$shell_config" "$distro" "$windows_env"
     
+    # 交互式确认
+    interactive_confirmation
+    
+    echo ""
+    print_color "$GREEN" "开始执行安装..."
+    echo ""
+    
+    # 执行安装步骤
     # 创建目录结构
     create_directories
     
-    # 安装核心脚本
-    install_core_scripts
+    # 创建env_loader文件
+    create_env_loader
+    
+    # 创建示例配置
+    create_sample_profiles
     
     # 集成到Shell
     if [[ "$shell_type" != "unknown" ]]; then
         integrate_shell "$shell_config" "$shell_type"
     fi
     
-    # 创建示例配置
-    create_sample_profiles
-    
     # 完成提示
     echo ""
-    print_color "${GREEN}${BOLD}" "🎉 EnvSphere 安装成功！"
+    print_color "$GREEN" "🎉 EnvSphere 安装成功！"
     echo ""
-    print_color "${CYAN}" "=== 快速开始教程 ==="
+    print_color "$CYAN" "=== 使用说明 ==="
     echo ""
-    echo "1. 重新加载您的shell配置或重启终端:"
-    if [[ -n "$shell_config" ]]; then
-        echo "   source ${shell_config}"
-    fi
+    echo "重新加载shell配置或重启终端，然后使用："
     echo ""
-    echo "2. 分析您当前的环境变量:"
-    echo "   envsphere analyze"
+    echo "  loadenv                    # 显示可用配置"
+    echo "  loadenv <profile>          # 加载指定配置"
+    echo "  loadenv -l, --list         # 列出所有配置"
+    echo "  loadenv -a, --all          # 加载所有配置"
     echo ""
-    echo "3. 运行迁移向导（推荐）:"
-    echo "   envsphere migrate"
+    echo "示例："
+    echo "  loadenv claude             # 加载Claude配置"
+    echo "  loadenv development        # 加载开发环境"
     echo ""
-    echo "4. 查看可用配置:"
-    echo "   envsphere list"
+    print_color "$CYAN" "配置文件目录: $ENV_PROFILES_DIR"
     echo ""
-    echo "5. 加载配置:"
-    echo "   envsphere load development    # 加载开发环境"
-    echo "   envsphere load api-keys       # 加载API密钥"
-    echo ""
-    echo "快捷方式:"
-    echo "   es ls                         # 列出配置"
-    echo "   es load dev                   # 加载开发配置"
-    echo ""
-    print_color "${YELLOW}" "=== 详细教程 ==="
-    echo ""
-    print_color "${CYAN}" "📚 完整文档: https://github.com/MisonL/EnvSphere"
-    echo ""
-    print_color "${CYAN}" "📖 使用教程: https://github.com/MisonL/EnvSphere/blob/main/docs/TUTORIAL.md"
-    echo ""
-    print_color "${CYAN}" "💡 高级用法:"
-    echo "   - 在项目目录创建 .envsphere 文件实现自动加载"
-    echo "   - 使用 envsphere create <name> 创建自定义配置"
-    echo "   - 编辑 ~/.envsphere/profiles/ 下的配置文件"
-    echo ""
-    print_color "${RED}" "⚠️  重要提示:"
-    echo "   - 不要将真实的API密钥提交到版本控制"
-    echo "   - 定期备份您的配置文件"
-    echo "   - 使用 envsphere migrate 时仔细检查要迁移的变量"
-    echo ""
-    print_color "${GREEN}" "🚀 开始使用 EnvSphere 管理您的环境变量吧！"
+    print_color "$YELLOW" "提示: 编辑 $ENV_PROFILES_DIR 下的 .env 文件来添加您的配置"
 }
 
 # 运行主函数
