@@ -489,13 +489,6 @@ interactive_confirmation() {
 
 # 主安装流程
 main() {
-    # 检测是否有强制安装参数
-    local force_install=false
-    if [[ "$1" == "--force" ]] || [[ "$1" == "-f" ]]; then
-        force_install=true
-        print_color "$YELLOW" "⚠️  检测到 --force 参数，将跳过交互式确认"
-    fi
-    
     print_header
     
     # 检测系统信息
@@ -537,16 +530,13 @@ main() {
     echo "  配置文件: $shell_config"
     echo ""
     
-    # 显示实施方案
-    show_implementation_plan "$os" "$shell_type" "$shell_config" "$distro" "$windows_env"
+    # 显示简要安装信息（不显示完整实施方案）
+    print_color "$CYAN" "正在安装 EnvSphere..."
+    echo "  目标目录: $ENV_PROFILES_DIR"
+    echo "  Shell配置: $shell_config"
+    echo ""
     
-    # 交互式确认或强制安装
-    if [ "$force_install" = true ]; then
-        print_color "$YELLOW" "⚠️  跳过交互式确认，强制继续安装..."
-    else
-        interactive_confirmation
-    fi
-    
+    # 直接开始安装（跳过交互式确认）
     echo ""
     print_color "$GREEN" "开始执行安装..."
     echo ""
