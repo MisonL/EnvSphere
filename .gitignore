@@ -1,12 +1,12 @@
 # 忽略EnvSphere的临时文件和缓存
-.envsphere/temp/
-.envsphere/cache/
-.envsphere/analysis/
-.envsphere/backups/
+.env_profiles/temp/
+.env_profiles/cache/
+.env_profiles/analysis/
+.env_profiles/backups/
 
 # 忽略用户配置文件（保留示例）
-.envsphere/profiles/*.env
-!.envsphere/profiles/example-*.env
+.env_profiles/*.env
+!.env_profiles/example-*.env
 
 # 忽略测试生成的文件
 test-results/

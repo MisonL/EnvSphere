@@ -20,9 +20,17 @@
 
 ## 📦 安装
 
-### 快速安装
+### 一键安装（推荐）
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash
+```
+
+### 安全安装（推荐用于生产环境）
+```bash
+# 先下载并检查脚本内容
+curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh -o install.sh
+cat install.sh  # 检查脚本内容
+bash install.sh  # 执行安装
 ```
 
 ### 手动安装
@@ -30,6 +38,13 @@ curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | 
 git clone https://github.com/MisonL/EnvSphere.git
 cd EnvSphere
 ./install.sh
+```
+
+### 安装选项
+```bash
+./install.sh              # 交互式安装
+./install.sh --force      # 强制安装（跳过确认）
+./install.sh --help       # 显示帮助信息
 ```
 
 ## 🚀 快速开始

@@ -365,7 +365,16 @@ integrate_shell() {
         echo "if [ -f ~/.env_loader ]; then"
         echo "    source ~/.env_loader"
         echo "fi"
-    } >> "$shell_config"
+    } >> "$shell_config" 2>/dev/null || {
+        print_color "$YELLOW" "警告: 无法写入 $shell_config，请手动添加以下内容:"
+        echo ""
+        echo "# 加载环境变量管理器"
+        echo "if [ -f ~/.env_loader ]; then"
+        echo "    source ~/.env_loader"
+        echo "fi"
+        echo ""
+        return 1
+    }
     
     print_color "$GREEN" "✓ 已集成到 $shell_config"
 }
@@ -487,8 +496,52 @@ interactive_confirmation() {
     esac
 }
 
+# 显示帮助信息
+show_help() {
+    echo ""
+    print_color "$CYAN" "╔══════════════════════════════════════════════════════╗"
+    print_color "$CYAN" "║                  EnvSphere 安装帮助                    ║"
+    print_color "$CYAN" "╚══════════════════════════════════════════════════════╝"
+    echo ""
+    
+    print_color "$BLUE" "📖 用法:"
+    echo "  ./install.sh              # 交互式安装"
+    echo "  ./install.sh --force      # 强制安装（跳过确认）"
+    echo "  ./install.sh --help       # 显示此帮助信息"
+    echo ""
+    
+    print_color "$BLUE" "🌐 在线安装:"
+    echo "  curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash"
+    echo ""
+    
+    print_color "$BLUE" "⚠️  安全提示:"
+    echo "  推荐先下载脚本检查内容后再执行："
+    echo "  curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh -o install.sh"
+    echo "  cat install.sh  # 检查内容"
+    echo "  bash install.sh  # 执行安装"
+    echo ""
+    
+    print_color "$BLUE" "🔧 安装后使用:"
+    echo "  loadenv                    # 显示可用配置"
+    echo "  loadenv <profile>          # 加载指定配置"
+    echo "  loadenv -l, --list         # 列出所有配置"
+    echo "  loadenv -a, --all          # 加载所有配置"
+    echo ""
+    
+    print_color "$BLUE" "📁 安装位置:"
+    echo "  配置目录: ~/.env_profiles/"
+    echo "  加载器: ~/.env_loader"
+    echo ""
+}
+
 # 主安装流程
 main() {
+    # 检查帮助参数
+    if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
+        show_help
+        exit 0
+    fi
+    
     print_header
     
     # 检测系统信息
@@ -530,13 +583,25 @@ main() {
     echo "  配置文件: $shell_config"
     echo ""
     
+    # 检查是否强制安装
+    local force_install=false
+    if [[ "${1:-}" == "--force" ]]; then
+        force_install=true
+        print_color "$YELLOW" "⚠️  强制安装模式（跳过确认）"
+    fi
+    
     # 显示简要安装信息（不显示完整实施方案）
     print_color "$CYAN" "正在安装 EnvSphere..."
     echo "  目标目录: $ENV_PROFILES_DIR"
     echo "  Shell配置: $shell_config"
     echo ""
     
-    # 直接开始安装（跳过交互式确认）
+    # 非强制安装时显示实施方案并确认
+    if [[ "$force_install" != "true" ]]; then
+        show_implementation_plan "$os" "$shell_type" "$shell_config" "$distro" "$windows_env"
+        interactive_confirmation
+    fi
+    
     echo ""
     print_color "$GREEN" "开始执行安装..."
     echo ""
