@@ -33,6 +33,11 @@ cat install.sh  # 检查脚本内容
 bash install.sh  # 执行安装
 ```
 
+### 查看帮助信息
+```bash
+curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash -s -- --help
+```
+
 ### 手动安装
 ```bash
 git clone https://github.com/MisonL/EnvSphere.git
