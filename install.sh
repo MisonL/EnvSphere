@@ -443,8 +443,27 @@ interactive_confirmation() {
     echo "  输入 n 或 no   - 取消安装"
     echo "  输入其他       - 重新显示此提示"
     echo ""
-    echo -n "您的选择: "
-    read -r response
+    
+    # 检测是否在管道环境中运行
+    if [ -p /dev/stdin ] || [ ! -t 0 ]; then
+        # 管道环境 - 提供替代方案
+        print_color "$YELLOW" "⚠️  检测到管道环境，无法交互式输入"
+        echo ""
+        echo "解决方案："
+        echo "  1. 手动安装: git clone https://github.com/MisonL/EnvSphere.git && cd EnvSphere && ./install.sh"
+        echo "  2. 强制安装: 添加 --force 参数 (不推荐)"
+        echo "  3. 查看帮助: curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash -s -- --help"
+        echo ""
+        echo "是否强制继续安装？(风险自负) [y/N]: "
+        read -r response < /dev/tty 2>/dev/null || {
+            print_color "$YELLOW" "无法读取终端输入，安装已取消"
+            exit 1
+        }
+    else
+        # 正常终端环境
+        echo -n "您的选择: "
+        read -r response
+    fi
     
     case "$response" in
         [Yy]|[Yy][Ee][Ss])
@@ -470,6 +489,13 @@ interactive_confirmation() {
 
 # 主安装流程
 main() {
+    # 检测是否有强制安装参数
+    local force_install=false
+    if [[ "$1" == "--force" ]] || [[ "$1" == "-f" ]]; then
+        force_install=true
+        print_color "$YELLOW" "⚠️  检测到 --force 参数，将跳过交互式确认"
+    fi
+    
     print_header
     
     # 检测系统信息
@@ -514,8 +540,12 @@ main() {
     # 显示实施方案
     show_implementation_plan "$os" "$shell_type" "$shell_config" "$distro" "$windows_env"
     
-    # 交互式确认
-    interactive_confirmation
+    # 交互式确认或强制安装
+    if [ "$force_install" = true ]; then
+        print_color "$YELLOW" "⚠️  跳过交互式确认，强制继续安装..."
+    else
+        interactive_confirmation
+    fi
     
     echo ""
     print_color "$GREEN" "开始执行安装..."
