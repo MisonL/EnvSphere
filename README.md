@@ -224,7 +224,11 @@ EnvSphere项目/
 
 ## 🤝 贡献
 
-欢迎提交Issue和Pull Request！
+欢迎提交Issue和Pull Request！请查看 [贡献指南](CONTRIBUTING.md) 了解详细信息。
+
+## 📋 更新日志
+
+查看 [更新日志](CHANGELOG.md) 了解版本变化。
 
 ## 📄 许可证
 

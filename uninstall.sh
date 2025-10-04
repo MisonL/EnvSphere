@@ -266,8 +266,40 @@ show_uninstall_info() {
     echo ""
 }
 
+# 显示帮助信息
+show_help() {
+    echo ""
+    print_color "$CYAN" "╔══════════════════════════════════════════════════════╗"
+    print_color "$CYAN" "║                  EnvSphere 卸载帮助                    ║"
+    print_color "$CYAN" "╚══════════════════════════════════════════════════════╝"
+    echo ""
+    
+    print_color "$BLUE" "📖 用法:"
+    echo "  ./uninstall.sh            # 交互式卸载"
+    echo "  ./uninstall.sh --help     # 显示此帮助信息"
+    echo ""
+    
+    print_color "$BLUE" "⚠️  注意事项:"
+    echo "  - 卸载会备份您的Shell配置文件"
+    echo "  - 会询问是否删除配置文件目录"
+    echo "  - 卸载后需要重新加载Shell配置"
+    echo ""
+    
+    print_color "$BLUE" "🔧 卸载后操作:"
+    echo "  source ~/.zshrc          # 重新加载zsh配置"
+    echo "  source ~/.bashrc         # 重新加载bash配置"
+    echo "  # 或重启终端"
+    echo ""
+}
+
 # 主卸载流程
 main() {
+    # 检查帮助参数
+    if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
+        show_help
+        exit 0
+    fi
+    
     print_header
     
     # 检测系统信息
