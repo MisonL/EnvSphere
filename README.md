@@ -4,7 +4,7 @@
 
 > *简洁的环境变量管理器 - 复刻loadenv模式*
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/MisonL/EnvSphere)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/MisonL/EnvSphere)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 </div>

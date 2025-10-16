@@ -20,7 +20,7 @@ readonly CYAN='\033[0;36m'
 readonly RESET='\033[0m'
 
 # 安装配置
-readonly ENVSphere_VERSION="1.0.0"
+readonly ENVSphere_VERSION="1.1.0"
 readonly ENV_PROFILES_DIR="$HOME/.env_profiles"
 readonly ENV_LOADER_FILE="$HOME/.env_loader"
 readonly ENV_LOADER_TEMPLATE="$SCRIPT_DIR/env_loader.template"
