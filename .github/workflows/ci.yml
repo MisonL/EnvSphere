@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Syntax check
+        run: |
+          bash -n install.sh
+          bash -n uninstall.sh
+
+      - name: Shellcheck
+        run: |
+          shellcheck install.sh
+          shellcheck uninstall.sh
+          shellcheck env_loader.template
+
+      - name: Integration test
+        env:
+          HOME: ${{ github.workspace }}/sandbox
+        run: |
+          mkdir -p "$HOME"
+          cp -r . "$HOME/EnvSphere"
+          cd "$HOME/EnvSphere"
+          ./install.sh --force
+          test -f "$HOME/.env_loader"
+          test -d "$HOME/.env_profiles"
+          ./uninstall.sh <<<'y'

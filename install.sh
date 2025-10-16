@@ -6,6 +6,11 @@
 
 set -euo pipefail
 
+SCRIPT_DIR_DIRNAME="$(dirname "${BASH_SOURCE[0]}")"
+readonly SCRIPT_DIR_DIRNAME
+SCRIPT_DIR="$(cd "$SCRIPT_DIR_DIRNAME" && pwd)"
+readonly SCRIPT_DIR
+
 # 颜色定义
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
@@ -18,6 +23,8 @@ readonly RESET='\033[0m'
 readonly ENVSphere_VERSION="1.0.0"
 readonly ENV_PROFILES_DIR="$HOME/.env_profiles"
 readonly ENV_LOADER_FILE="$HOME/.env_loader"
+readonly ENV_LOADER_TEMPLATE="$SCRIPT_DIR/env_loader.template"
+readonly ENV_PROFILES_TEMPLATE_DIR="$SCRIPT_DIR/.env_profiles"
 
 # 打印彩色输出
 print_color() {
@@ -57,6 +64,7 @@ detect_system() {
                 # 检测Linux发行版
                 if [ -f /etc/os-release ]; then
                     # 读取发行版信息
+                    # shellcheck source=/etc/os-release
                     . /etc/os-release
                     case "$ID" in
                         ubuntu|debian)
@@ -96,6 +104,7 @@ detect_system() {
                 elif [ -f /etc/debian_version ]; then
                     # Debian/Ubuntu旧版本
                     if [ -f /etc/lsb-release ]; then
+                        # shellcheck source=/etc/lsb-release
                         . /etc/lsb-release
                         if [ "$DISTRIB_ID" = "Ubuntu" ]; then
                             os="ubuntu"
@@ -146,9 +155,12 @@ detect_system() {
 detect_shell() {
     local shell_type=""
     local shell_config=""
-    local system_info=$(detect_system)
-    local os=$(echo "$system_info" | cut -d' ' -f1)
-    local windows_env=$(echo "$system_info" | cut -d' ' -f4)
+    local system_info
+    system_info=$(detect_system)
+    local os
+    os=$(echo "$system_info" | cut -d' ' -f1)
+    local windows_env
+    windows_env=$(echo "$system_info" | cut -d' ' -f4)
     
     # 检测Shell类型
     if [ -n "${ZSH_VERSION:-}" ]; then
@@ -242,67 +254,13 @@ create_directories() {
 # 创建env_loader文件（复刻用户的函数）
 create_env_loader() {
     print_color "$BLUE" "正在创建环境变量加载器..."
-    
-    cat > "$ENV_LOADER_FILE" << 'EOF'
-# 环境变量加载器
-# 用法：loadenv [profile_name] 或 loadenv -l 或 loadenv -a
 
-env_profile() {
-    local profile_dir="$HOME/.env_profiles"
-    
-    case "$1" in
-        -l|--list)
-            echo "可用的环境变量配置："
-            ls "$profile_dir"/*.env 2>/dev/null | xargs -n 1 basename -s .env | sed 's/^/  - /'
-            ;;
-        -a|--all)
-            echo "加载所有环境变量配置..."
-            for env_file in "$profile_dir"/*.env; do
-                if [ -f "$env_file" ]; then
-                    local name=$(basename "$env_file" .env)
-                    echo "  加载 $name 配置..."
-                    source "$env_file"
-                fi
-            done
-            echo "所有环境变量配置加载完成！"
-            ;;
-        -h|--help)
-            echo "用法："
-            echo "  loadenv [profile]     加载指定的环境变量配置"
-            echo "  loadenv -l, --list    列出所有可用配置"
-            echo "  loadenv -a, --all     加载所有配置"
-            echo "  loadenv -h, --help    显示帮助信息"
-            ;;
-        "")
-            echo "错误：请指定要加载的配置文件"
-            echo "可用配置："
-            ls "$profile_dir"/*.env 2>/dev/null | xargs -n 1 basename -s .env | sed 's/^/  - /'
-            return 1
-            ;;
-        *)
-            local env_file="$profile_dir/$1.env"
-            if [ -f "$env_file" ]; then
-                echo "加载 $1 环境变量配置..."
-                source "$env_file"
-                echo "✓ $1 环境变量配置加载成功！"
-            else
-                echo "错误：找不到配置文件 $env_file"
-                echo "可用配置："
-                ls "$profile_dir"/*.env 2>/dev/null | xargs -n 1 basename -s .env | sed 's/^/  - /'
-                return 1
-            fi
-            ;;
-    esac
-}
+    if [ ! -f "$ENV_LOADER_TEMPLATE" ]; then
+        print_color "$RED" "错误: 找不到模板 $ENV_LOADER_TEMPLATE"
+        exit 1
+    fi
 
-# 创建loadenv alias指向函数
-alias loadenv='env_profile'
-
-# 快速加载常用配置的alias
-alias load-all-env='env_profile --all'
-alias list-envs='env_profile --list'
-EOF
-
+    cp "$ENV_LOADER_TEMPLATE" "$ENV_LOADER_FILE"
     chmod +x "$ENV_LOADER_FILE"
     print_color "$GREEN" "✓ 创建环境变量加载器: $ENV_LOADER_FILE"
 }
@@ -310,63 +268,87 @@ EOF
 # 创建示例配置文件
 create_sample_profiles() {
     print_color "$BLUE" "正在创建示例配置文件..."
-    
-    # 开发环境示例
-    cat > "$ENV_PROFILES_DIR/development.env" << 'EOF'
-# 开发环境配置
-export NODE_ENV="development"
-export DEBUG="true"
-export LOG_LEVEL="debug"
-EOF
 
-    # API密钥模板
-    cat > "$ENV_PROFILES_DIR/api-keys.env" << 'EOF'
-# API密钥配置模板
-# 请替换为实际的API密钥
+    if [ ! -d "$ENV_PROFILES_TEMPLATE_DIR" ]; then
+        print_color "$YELLOW" "提示: 未找到模板目录 $ENV_PROFILES_TEMPLATE_DIR，跳过示例复制"
+        return 0
+    fi
 
-# 示例：
-# export OPENAI_API_KEY="your-api-key-here"
-# export GITHUB_TOKEN="your-github-token-here"
-EOF
-
-    # Claude配置示例（基于你的现有配置）
-    cat > "$ENV_PROFILES_DIR/claude.env" << 'EOF'
-# Claude Code 环境变量配置
-export ANTHROPIC_API_KEY="your-api-key-here"
-export ANTHROPIC_BASE_URL="https://www.k2sonnet.com/api/claudecode"
-export CLAUDE_FORCE_ENV="true"
-EOF
-
-    print_color "$GREEN" "✓ 创建示例配置文件完成"
+    find "$ENV_PROFILES_TEMPLATE_DIR" -maxdepth 1 -name "example-*.env" -print0 | while IFS= read -r -d '' template; do
+        local target
+        target="$ENV_PROFILES_DIR/$(basename "$template")"
+        if [ -f "$target" ]; then
+            print_color "$YELLOW" "跳过已存在的示例: $(basename "$template")"
+            continue
+        fi
+        cp "$template" "$target"
+        print_color "$GREEN" "✓ 已复制示例: $(basename "$template")"
+    done
 }
 
 # 集成到Shell配置
 integrate_shell() {
     local shell_config="$1"
     local shell_type="$2"
-    
+    local non_interactive="$3"
+
     if [[ -z "$shell_config" ]]; then
-        print_color "$YELLOW" "警告: 无法检测到Shell配置文件"
+        print_color "$YELLOW" "警告: 未检测到Shell配置文件，您可以稍后手动执行:"
+        echo "  echo 'if [ -f ~/.env_loader ]; then source ~/.env_loader; fi' >> ~/.bashrc"
         return 1
     fi
-    
-    print_color "$BLUE" "正在集成到 $shell_type 配置..."
-    
-    # 检查是否已集成
-    if grep -q "加载环境变量管理器" "$shell_config" 2>/dev/null; then
+
+    local target_config="$shell_config"
+
+    if [[ "$non_interactive" != "true" ]]; then
+        print_color "$BLUE" "检测到的 $shell_type 配置文件: $shell_config"
+        read -r -p "确认使用该文件进行集成？(Y/n/自定义路径): " response || true
+
+        case "$response" in
+            [Nn]|[Nn][Oo])
+                read -r -p "请输入希望写入的配置文件路径: " custom_path || true
+                if [[ -z "${custom_path:-}" ]]; then
+                    print_color "$YELLOW" "未提供路径，将跳过自动集成"
+                    return 1
+                fi
+                target_config="$custom_path"
+                ;;
+            [Yy]|[Yy][Ee][Ss]|"")
+                ;;
+            *)
+                target_config="$response"
+                ;;
+        esac
+    else
+        print_color "$BLUE" "非交互模式，自动使用 $target_config 进行集成"
+    fi
+
+    if [[ ! -e "$target_config" ]]; then
+        touch "$target_config" 2>/dev/null || {
+            print_color "$YELLOW" "无法创建 $target_config，请手动添加以下内容:"
+            echo ""
+            echo "# 加载环境变量管理器"
+            echo "if [ -f ~/.env_loader ]; then"
+            echo "    source ~/.env_loader"
+            echo "fi"
+            echo ""
+            return 1
+        }
+    fi
+
+    if grep -q "加载环境变量管理器" "$target_config" 2>/dev/null; then
         print_color "$YELLOW" "环境变量管理器已存在，跳过集成"
         return 0
     fi
-    
-    # 添加到shell配置文件
+
     {
         echo ""
         echo "# 加载环境变量管理器"
         echo "if [ -f ~/.env_loader ]; then"
         echo "    source ~/.env_loader"
         echo "fi"
-    } >> "$shell_config" 2>/dev/null || {
-        print_color "$YELLOW" "警告: 无法写入 $shell_config，请手动添加以下内容:"
+    } >> "$target_config" 2>/dev/null || {
+        print_color "$YELLOW" "警告: 无法写入 $target_config，请手动添加以下内容:"
         echo ""
         echo "# 加载环境变量管理器"
         echo "if [ -f ~/.env_loader ]; then"
@@ -375,8 +357,36 @@ integrate_shell() {
         echo ""
         return 1
     }
-    
-    print_color "$GREEN" "✓ 已集成到 $shell_config"
+
+    print_color "$GREEN" "✓ 已集成到 $target_config"
+}
+
+verify_loader() {
+    local shell_type="$1"
+    local shell_bin="${SHELL:-}"
+
+    case "$shell_type" in
+        zsh)
+            shell_bin="${shell_bin:-/bin/zsh}"
+            ;;
+        bash)
+            shell_bin="${shell_bin:-/bin/bash}"
+            ;;
+        *)
+            shell_bin="${shell_bin:-/bin/sh}"
+            ;;
+    esac
+
+    if ! command -v "$shell_bin" >/dev/null 2>&1; then
+        print_color "$YELLOW" "提示: 无法自动校验 loadenv，请手动执行 'source ~/.env_loader'"
+        return
+    fi
+
+    if "$shell_bin" -lc "if [ -f \"\$HOME/.env_loader\" ]; then . \"\$HOME/.env_loader\"; fi; command -v loadenv >/dev/null" >/dev/null 2>&1; then
+        print_color "$GREEN" "✓ 校验完成: loadenv 命令可用"
+    else
+        print_color "$YELLOW" "提示: 请重新加载 shell 配置以启用 loadenv 命令"
+    fi
 }
 
 # 显示实施方案
@@ -437,7 +447,7 @@ show_implementation_plan() {
     echo ""
     
     print_color "$YELLOW" "⚠️  注意事项："
-    echo "   - 安装将修改您的shell配置文件"
+    echo "   - 安装将修改您的shell配置文件，若在CI或非交互环境中请使用 --force"
     echo "   - 建议先备份重要配置"
     echo "   - 安装完成后需要重新加载shell配置"
     echo ""
@@ -455,19 +465,12 @@ interactive_confirmation() {
     
     # 检测是否在管道环境中运行
     if [ -p /dev/stdin ] || [ ! -t 0 ]; then
-        # 管道环境 - 提供替代方案
-        print_color "$YELLOW" "⚠️  检测到管道环境，无法交互式输入"
+        print_color "$YELLOW" "⚠️  检测到管道环境，默认跳过交互确认"
+        echo "  使用方式： ./install.sh --force"
+        echo "  或者: curl ... | bash -s -- --force"
+        echo "  示例: curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash -s -- --force"
         echo ""
-        echo "解决方案："
-        echo "  1. 手动安装: git clone https://github.com/MisonL/EnvSphere.git && cd EnvSphere && ./install.sh"
-        echo "  2. 强制安装: 添加 --force 参数 (不推荐)"
-        echo "  3. 查看帮助: curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash -s -- --help"
-        echo ""
-        echo "是否强制继续安装？(风险自负) [y/N]: "
-        read -r response < /dev/tty 2>/dev/null || {
-            print_color "$YELLOW" "无法读取终端输入，安装已取消"
-            exit 1
-        }
+        return 0
     else
         # 正常终端环境
         echo -n "您的选择: "
@@ -506,7 +509,7 @@ show_help() {
     
     print_color "$BLUE" "📖 用法:"
     echo "  ./install.sh              # 交互式安装"
-    echo "  ./install.sh --force      # 强制安装（跳过确认）"
+    echo "  ./install.sh --force      # 非交互/CI 环境使用，跳过确认"
     echo "  ./install.sh --help       # 显示此帮助信息"
     echo ""
     
@@ -527,10 +530,16 @@ show_help() {
     echo "  loadenv -l, --list         # 列出所有配置"
     echo "  loadenv -a, --all          # 加载所有配置"
     echo ""
-    
+
     print_color "$BLUE" "📁 安装位置:"
     echo "  配置目录: ~/.env_profiles/"
-    echo "  加载器: ~/.env_loader"
+    echo "  加载器: ~/.env_loader (由仓库模板 env_loader.template 生成)"
+    echo "  示例配置: ~/.env_profiles/example-*.env"
+    echo ""
+
+    print_color "$BLUE" "🤖 非交互示例:"
+    echo "  curl -fsSL https://raw.githubusercontent.com/MisonL/EnvSphere/main/install.sh | bash -s -- --force"
+    echo "  ./install.sh --force"
     echo ""
 }
 
@@ -545,19 +554,28 @@ main() {
     print_header
     
     # 检测系统信息
-    local system_info=$(detect_system)
-    local os=$(echo "$system_info" | cut -d' ' -f1)
-    local is_wsl=$(echo "$system_info" | cut -d' ' -f2)
-    local distro=$(echo "$system_info" | cut -d' ' -f3)
-    local windows_env=$(echo "$system_info" | cut -d' ' -f4)
-    
-    local shell_info=$(detect_shell)
-    local shell_type=$(echo "$shell_info" | cut -d' ' -f1)
-    local shell_config=$(echo "$shell_info" | cut -d' ' -f2)
+    local system_info
+    system_info=$(detect_system)
+    local os
+    os=$(echo "$system_info" | cut -d' ' -f1)
+    local is_wsl
+    is_wsl=$(echo "$system_info" | cut -d' ' -f2)
+    local distro
+    distro=$(echo "$system_info" | cut -d' ' -f3)
+    local windows_env
+    windows_env=$(echo "$system_info" | cut -d' ' -f4)
+
+    local shell_info
+    shell_info=$(detect_shell)
+    local shell_type
+    shell_type=$(echo "$shell_info" | cut -d' ' -f1)
+    local shell_config
+    shell_config=$(echo "$shell_info" | cut -d' ' -f2)
+    local non_interactive=false
     
     print_color "$CYAN" "系统信息:"
     echo "  操作系统: $os"
-    if [ "$distro" != "unknown" ] && [ "$os" = "ubuntu" ] || [ "$os" = "centos" ] || [ "$os" = "alpine" ] || [ "$os" = "arch" ] || [ "$os" = "suse" ]; then
+    if [ "$distro" != "unknown" ] && { [ "$os" = "ubuntu" ] || [ "$os" = "centos" ] || [ "$os" = "alpine" ] || [ "$os" = "arch" ] || [ "$os" = "suse" ]; }; then
         echo "  发行版: $distro"
     fi
     if [ "$is_wsl" = "true" ]; then
@@ -588,6 +606,7 @@ main() {
     if [[ "${1:-}" == "--force" ]]; then
         force_install=true
         print_color "$YELLOW" "⚠️  强制安装模式（跳过确认）"
+        non_interactive=true
     fi
     
     # 显示简要安装信息（不显示完整实施方案）
@@ -618,7 +637,8 @@ main() {
     
     # 集成到Shell
     if [[ "$shell_type" != "unknown" ]]; then
-        integrate_shell "$shell_config" "$shell_type"
+        integrate_shell "$shell_config" "$shell_type" "$non_interactive"
+        verify_loader "$shell_type"
     fi
     
     # 完成提示

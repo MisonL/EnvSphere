@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+
+# 环境变量加载器模板
+# 用法：loadenv [profile_name] 或 loadenv -l 或 loadenv -a
+
+env_profile() {
+    local profile_dir="${HOME}/.env_profiles"
+
+    case "$1" in
+        -l|--list)
+            echo "可用的环境变量配置："
+            find "${profile_dir}" -maxdepth 1 -name '*.env' -print0 \
+                | xargs -0 -n 1 basename \
+                | sed 's/\.env$//' \
+                | sed 's/^/  - /'
+            ;;
+        -a|--all)
+            echo "加载所有环境变量配置..."
+            find "${profile_dir}" -maxdepth 1 -name '*.env' -print0 | while IFS= read -r -d '' env_file; do
+                if [ -f "${env_file}" ]; then
+                    local name
+                    name="$(basename "${env_file}" .env)"
+                    echo "  加载 ${name} 配置..."
+                    # shellcheck source=/dev/null
+                    . "${env_file}"
+                fi
+            done
+            echo "所有环境变量配置加载完成！"
+            ;;
+        -h|--help)
+            echo "用法："
+            echo "  loadenv [profile]     加载指定的环境变量配置"
+            echo "  loadenv -l, --list    列出所有可用配置"
+            echo "  loadenv -a, --all     加载所有配置"
+            echo "  loadenv -h, --help    显示帮助信息"
+            ;;
+        "")
+            echo "错误：请指定要加载的配置文件"
+            echo "可用配置："
+            find "${profile_dir}" -maxdepth 1 -name '*.env' -print0 \
+                | xargs -0 -n 1 basename \
+                | sed 's/\.env$//' \
+                | sed 's/^/  - /'
+            return 1
+            ;;
+        *)
+            local env_file="${profile_dir}/$1.env"
+            if [ -f "${env_file}" ]; then
+                echo "加载 $1 环境变量配置..."
+                # shellcheck source=/dev/null
+                . "${env_file}"
+                echo "✓ $1 环境变量配置加载成功！"
+            else
+                echo "错误：找不到配置文件 ${env_file}"
+                echo "可用配置："
+                find "${profile_dir}" -maxdepth 1 -name '*.env' -print0 \
+                    | xargs -0 -n 1 basename \
+                    | sed 's/\.env$//' \
+                    | sed 's/^/  - /'
+                return 1
+            fi
+            ;;
+    esac
+}
+
+alias loadenv='env_profile'
+alias load-all-env='env_profile --all'
+alias list-envs='env_profile --list'

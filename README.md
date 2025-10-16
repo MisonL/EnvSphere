@@ -11,11 +11,11 @@
 
 ## ✨ 特性
 
-- **🚀 智能安装** - 交互式确认，实施方案预览
-- **🎯 简洁实用** - 复刻经典的loadenv使用模式
-- **🐚 多Shell支持** - 支持 zsh、bash
+- **🚀 智能安装** - 交互式确认，实施方案预览，同时支持非交互/CI 模式
+- **🎯 简洁实用** - 复刻经典的 loadenv 使用模式
+- **🐚 多Shell支持** - 支持 zsh、bash，兼容 macOS、主流 Linux 发行版及 WSL/Git Bash
 - **⚡ 快速加载** - 瞬间切换环境变量配置
-- **📝 易于管理** - 简单的文件结构，易于维护
+- **📝 模板驱动** - 内置 `env_loader.template` 与 `example-*.env` 示例，开箱即用
 - **🔒 安全可控** - 交互式确认，用户完全掌控
 
 ## 📦 安装
@@ -48,9 +48,11 @@ cd EnvSphere
 ### 安装选项
 ```bash
 ./install.sh              # 交互式安装
-./install.sh --force      # 强制安装（跳过确认）
+./install.sh --force      # 非交互/CI 场景使用，跳过确认
 ./install.sh --help       # 显示帮助信息
 ```
+
+> 📌 **CI / 非交互环境**：使用 `./install.sh --force` 或 `curl ... | bash -s -- --force`，脚本将自动使用检测到的配置文件路径完成集成。
 
 ## 🚀 快速开始
 
@@ -71,6 +73,20 @@ list-envs
 loadenv development    # 加载开发环境
 loadenv claude         # 加载Claude配置
 ```
+
+## 📁 示例资源
+
+项目内置以下模板资源，可直接复制或调整使用：
+
+```
+env_loader.template         # loadenv 函数模板
+.env_profiles/
+├── example-development.env # 开发环境示例
+├── example-api-keys.env    # API 密钥占位示例
+└── example-claude.env      # Claude Code 示例
+```
+
+> 安装脚本首次运行时会将 `example-*.env` 拷贝到 `~/.env_profiles/`，帮助快速上手。
 
 ## 📖 使用指南
 
@@ -204,12 +220,17 @@ for file in ~/.env_profiles/*.env; do echo "=== $(basename $file .env) ==="; cat
 ./uninstall.sh
 ```
 
+> 卸载脚本会备份原 shell 配置，并询问是否保留 `~/.env_profiles`，重新安装时仍可复用模板。
+
 ## 📁 文件结构
 
 ```
 EnvSphere项目/
 ├── install.sh              # 智能安装脚本
 ├── uninstall.sh            # 安全卸载脚本
+├── env_loader.template     # 环境变量加载器模板
+├── .env_profiles/          # 示例配置目录（example-*.env）
+├── .github/workflows/      # CI 检查（bash -n、shellcheck、最小化安装测试）
 ├── README.md               # 本文档
 └── LICENSE                 # MIT许可证
 

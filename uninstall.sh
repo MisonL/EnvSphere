@@ -6,16 +6,25 @@
 set -euo pipefail
 
 # 颜色定义
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[0;33m'
-readonly BLUE='\033[0;34m'
-readonly CYAN='\033[0;36m'
-readonly RESET='\033[0m'
+GREEN='\033[0;32m'
+readonly GREEN
+YELLOW='\033[0;33m'
+readonly YELLOW
+BLUE='\033[0;34m'
+readonly BLUE
+CYAN='\033[0;36m'
+readonly CYAN
+RESET='\033[0m'
+readonly RESET
 
 # 路径配置
+SCRIPT_DIR_RAW="$(dirname "${BASH_SOURCE[0]}")"
+readonly SCRIPT_DIR_RAW
+SCRIPT_DIR="$(cd "$SCRIPT_DIR_RAW" && pwd)"
+readonly SCRIPT_DIR
 readonly ENV_PROFILES_DIR="$HOME/.env_profiles"
 readonly ENV_LOADER_FILE="$HOME/.env_loader"
+readonly ENV_LOADER_TEMPLATE="$SCRIPT_DIR/env_loader.template"
 
 # 打印彩色输出
 print_color() {
@@ -55,6 +64,7 @@ detect_system() {
                 # 检测Linux发行版
                 if [ -f /etc/os-release ]; then
                     # 读取发行版信息
+                    # shellcheck source=/etc/os-release
                     . /etc/os-release
                     case "$ID" in
                         ubuntu|debian)
@@ -94,6 +104,7 @@ detect_system() {
                 elif [ -f /etc/debian_version ]; then
                     # Debian/Ubuntu旧版本
                     if [ -f /etc/lsb-release ]; then
+                        # shellcheck source=/etc/lsb-release
                         . /etc/lsb-release
                         if [ "$DISTRIB_ID" = "Ubuntu" ]; then
                             os="ubuntu"
@@ -144,8 +155,10 @@ detect_system() {
 detect_shell() {
     local shell_type=""
     local shell_config=""
-    local system_info=$(detect_system)
-    local os=$(echo "$system_info" | cut -d' ' -f1)
+    local system_info
+    system_info=$(detect_system)
+    local os
+    os=$(echo "$system_info" | cut -d' ' -f1)
     
     # 检测Shell类型
     if [ -n "${ZSH_VERSION:-}" ]; then
@@ -193,7 +206,8 @@ detect_shell() {
 backup_config() {
     local file="$1"
     if [[ -f "$file" ]]; then
-        local backup_file="${file}.backup.$(date +%Y%m%d_%H%M%S)"
+        local backup_file
+        backup_file="${file}.backup.$(date +%Y%m%d_%H%M%S)"
         cp "$file" "$backup_file"
         print_color "$GREEN" "✓ 已备份: $backup_file"
     fi
@@ -224,11 +238,14 @@ remove_files() {
     if [[ -f "$ENV_LOADER_FILE" ]]; then
         rm -f "$ENV_LOADER_FILE"
         print_color "$GREEN" "✓ 删除文件: $ENV_LOADER_FILE"
+    elif [[ -f "$ENV_LOADER_TEMPLATE" ]]; then
+        print_color "$YELLOW" "提示: 检测到模板文件，若您使用模板生成的加载器，请手动确认 ~/.env_loader 是否已移除"
     fi
     
     # 询问是否删除配置文件目录
     if [[ -d "$ENV_PROFILES_DIR" ]]; then
-        local profile_count=$(ls -1 "$ENV_PROFILES_DIR"/*.env 2>/dev/null | wc -l)
+        local profile_count
+        profile_count=$(find "$ENV_PROFILES_DIR" -maxdepth 1 -name "*.env" | wc -l | tr -d ' ')
         print_color "$YELLOW" "发现 $profile_count 个配置文件在 $ENV_PROFILES_DIR"
         
         echo -n "是否删除所有配置文件? (y/N): "
@@ -252,8 +269,10 @@ show_uninstall_info() {
     echo "1. 重新加载shell配置:"
     local shell_info
     shell_info=$(detect_shell)
-    local shell_type=$(echo "$shell_info" | cut -d' ' -f1)
-    local shell_config=$(echo "$shell_info" | cut -d' ' -f2)
+    local shell_type
+    shell_type=$(echo "$shell_info" | cut -d' ' -f1)
+    local shell_config
+    shell_config=$(echo "$shell_info" | cut -d' ' -f2)
     
     if [[ -n "$shell_config" ]]; then
         echo "   source $shell_config"
@@ -263,6 +282,9 @@ show_uninstall_info() {
     echo ""
     print_color "$YELLOW" "注意: 如果保留了配置文件，可以手动删除:"
     echo "   rm -rf $ENV_PROFILES_DIR"
+    if [[ -f "$ENV_LOADER_TEMPLATE" ]]; then
+        echo "   (提示: 如果需要恢复加载器，可重新运行安装脚本生成 ~/.env_loader)"
+    fi
     echo ""
 }
 
@@ -305,8 +327,10 @@ main() {
     # 检测系统信息
     local shell_info
     shell_info=$(detect_shell)
-    local shell_type=$(echo "$shell_info" | cut -d' ' -f1)
-    local shell_config=$(echo "$shell_info" | cut -d' ' -f2)
+    local shell_type
+    shell_type=$(echo "$shell_info" | cut -d' ' -f1)
+    local shell_config
+    shell_config=$(echo "$shell_info" | cut -d' ' -f2)
     
     print_color "$CYAN" "系统信息:"
     echo "  Shell类型: $shell_type"
