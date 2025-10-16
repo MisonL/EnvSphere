@@ -31,8 +31,9 @@ jobs:
         env:
           HOME: ${{ github.workspace }}/sandbox
         run: |
-          mkdir -p "$HOME"
-          cp -r . "$HOME/EnvSphere"
+          rm -rf "$HOME"
+          mkdir -p "$HOME/EnvSphere"
+          rsync -a --exclude 'sandbox/' "$GITHUB_WORKSPACE"/ "$HOME/EnvSphere/"
           cd "$HOME/EnvSphere"
           ./install.sh --force
           test -f "$HOME/.env_loader"
