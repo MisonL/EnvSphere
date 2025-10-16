@@ -247,14 +247,19 @@ remove_files() {
         local profile_count
         profile_count=$(find "$ENV_PROFILES_DIR" -maxdepth 1 -name "*.env" | wc -l | tr -d ' ')
         print_color "$YELLOW" "发现 $profile_count 个配置文件在 $ENV_PROFILES_DIR"
-        
-        echo -n "是否删除所有配置文件? (y/N): "
-        read -r response
-        if [[ "$response" =~ ^[Yy]$ ]]; then
+
+        if [ "${CI:-}" = "true" ]; then
             rm -rf "$ENV_PROFILES_DIR"
-            print_color "$GREEN" "✓ 删除目录: $ENV_PROFILES_DIR"
+            print_color "$GREEN" "✓ (CI) 已删除目录: $ENV_PROFILES_DIR"
         else
-            print_color "$YELLOW" "保留配置文件目录: $ENV_PROFILES_DIR"
+            echo -n "是否删除所有配置文件? (y/N): "
+            read -r response
+            if [[ "$response" =~ ^[Yy]$ ]]; then
+                rm -rf "$ENV_PROFILES_DIR"
+                print_color "$GREEN" "✓ 删除目录: $ENV_PROFILES_DIR"
+            else
+                print_color "$YELLOW" "保留配置文件目录: $ENV_PROFILES_DIR"
+            fi
         fi
     fi
 }
