@@ -65,6 +65,7 @@ detect_system() {
                 if [ -f /etc/os-release ]; then
                     # 读取发行版信息
                     # shellcheck source=/etc/os-release
+                    # shellcheck disable=SC1091
                     . /etc/os-release
                     case "$ID" in
                         ubuntu|debian)
@@ -105,6 +106,7 @@ detect_system() {
                     # Debian/Ubuntu旧版本
                     if [ -f /etc/lsb-release ]; then
                         # shellcheck source=/etc/lsb-release
+                        # shellcheck disable=SC1091
                         . /etc/lsb-release
                         if [ "$DISTRIB_ID" = "Ubuntu" ]; then
                             os="ubuntu"
